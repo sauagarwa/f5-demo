@@ -1,0 +1,67 @@
+{{- $root := . }}
+{{- $models := .Values.models }}
+{{- range $key, $model := $models }}
+{{- if $model.enabled }}
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ $key }}
+  annotations:
+    openshift.io/display-name: {{ $key }}
+    serving.knative.openshift.io/enablePassthrough: "true"
+    sidecar.istio.io/inject: "true"
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+    {{- if $root.Values.rawDeploymentMode }}
+    serving.kserve.io/deploymentMode: RawDeployment
+    {{- end }}
+  labels:
+    opendatahub.io/dashboard: "true"
+    networking.knative.dev/visibility: "cluster-local"
+spec:
+  predictor:
+    maxReplicas: {{ $model.maxReplicas | default 1 }}
+    minReplicas: {{ $model.minReplicas | default 1 }}
+    model:
+      modelFormat:
+        name: vLLM
+      name: ""
+      resources:
+      {{- if hasKey $model "resources" }}
+      {{- toYaml $model.resources | nindent 8 }}
+      {{- else }}
+      {{- if eq $root.Values.device "gpu" }}
+        limits:
+          cpu: "2"
+          memory: 8Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "1"
+          memory: 4Gi
+          nvidia.com/gpu: "1"
+          ephemeral-storage: {{ $model.storageSize | default "50Gi" }}
+      {{- end }}
+      {{- end }}
+      runtime: {{ $root.Values.servingRuntime.name }}
+      args:
+      - --model
+      - {{ $model.id }}
+      - --served-model-name
+      - {{ $model.id }}
+      {{- with $model.args }}
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with $model.env }}
+      env:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+    tolerations:
+    {{- if hasKey $model "tolerations" }}
+    {{- toYaml $model.tolerations | nindent 4 }}
+    {{- else }}
+    - key: nvidia.com/gpu
+      effect: NoSchedule
+      operator: Exists
+    {{- end }}
+{{- end }}
+{{- end }}
