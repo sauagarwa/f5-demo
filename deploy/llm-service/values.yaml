@@ -38,6 +38,10 @@ secret:
   hf_token: ""
 
 models:
+  f5-ai-gateway:
+    id: f5-ai-gateway
+    enabled: false
+    url: 
   llama-3-2-1b-instruct:
     id: meta-llama/Llama-3.2-1B-Instruct
     enabled: false
