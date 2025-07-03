@@ -29,6 +29,7 @@ policies:
   - name: demo-policy
     profiles:
       - name: demo-profile  # Maps a policy to a profile
+
   - name: demo-model-policy
     profiles:
       - name: demo-model-profile  # Maps a policy to a profile
@@ -36,19 +37,24 @@ policies:
 profiles:
   - name: demo-model-profile
     models:
-      - name: meta-llama/Llama-3.2-3B-Instruct
+      - name: ibm-granite/granite-3.3-2b-instruct
     services:
       - name: demo-model-profile-model # Sends traffic to the OpenAI API
         selector:
           type: input.model
           values:
-            - meta-llama/Llama-3.2-3B-Instruct 
-      
+            - ibm-granite/granite-3.3-2b-instruct
   - name: demo-profile
+    models:
+      - name: ibm-granite/granite-3.3-2b-instruct
     inputStages:
       - name: protect
         steps:
           - name: prompt-injection
+        selector:
+          type: input.model
+          values:
+            - ibm-granite/granite-3.3-2b-instruct
       - name: analyze
         steps:
           - name: language-id
@@ -60,31 +66,37 @@ profiles:
         steps:
           - name: repetition-detect
     services:
-      - name: openshift-ai-1b-instruct # Sends traffic to the OpenAI API
+      # - name: openshift-ai-1b-instruct # Sends traffic to the OpenAI API
+      #   selector:
+      #     tags:
+      #       - language:es
+      #       - language:fr
+      - name: granite-3-3-2b-instruct # Sends traffic to the OpenAI API
         selector:
-          tags:
-            - language:es
-            - language:fr
-      - name: openshift-ai-3b-instruct # Sends traffic to the OpenAI API
-        selector:
-          tags:
-            - language:en
+          type: input.model
+          values:
+            - ibm-granite/granite-3.3-2b-instruct
 services:
   - name: demo-model-profile-model
-    type: meta-llama/Llama-3.2-3B-Instruct
+    type: ibm-granite/granite-3.3-2b-instruct
     executor: openai
     config:
-      endpoint: "http://llama-3-2-3b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/models"
-  - name: openshift-ai-3b-instruct
-    type: meta-llama/Llama-3.2-3B-Instruct
+      endpoint: "http://granite-3-3-2b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/models"
+  - name: granite-3-3-2b-instruct
+    type: ibm-granite/granite-3.3-2b-instruct
     executor: openai
     config:
-      endpoint: "http://llama-3-2-3b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/chat/completions"
-  - name: openshift-ai-1b-instruct
-    type: RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8
-    executor: openai
-    config:
-      endpoint: "http://llama-3-2-1b-instruct-quantized-predictor.f5-demo.svc.cluster.local:8080/v1/chat/completions"
+      endpoint: "http://granite-3-3-2b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/chat/completions"
+  # - name: openshift-ai-1b-instruct
+  #   type: meta-llama/Llama-3.2-3B-Instruct
+  #   executor: openai
+  #   config:
+  #     endpoint: "http://granite-3-3-2b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/chat/completions"
+  # - name: openshift-ai-1b-instruct
+  #   type: RedHatAI/Llama-3.2-1B-Instruct-quantized.w8a8
+  #   executor: openai
+  #   config:
+  #     endpoint: "http://granite-3-3-2b-instruct-predictor.f5-demo.svc.cluster.local:8080/v1/chat/completions"
 processors:
   - name: system-prompt
     type: external
